@@ -78,6 +78,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   K8S_VERSION = default_s('K8S_VERSION', '')
   NGINX_IMAGE = default_s('NGINX_IMAGE', 'nginx:1.12.2')
 
+  # Verify Kubernetes module conformance to specification
+  VALIDATE_CONFORMANCE = default_s('VALIDATE_CONFORMANCE', '')
+
   # Verbose console
   VERBOSE = default_b('VERBOSE', false)
 end
@@ -205,6 +208,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         args.push("--workers", workers)
         args.push("--masters", masters)
         args.push("--nginx-image", NGINX_IMAGE)
+      end
+      if VALIDATE_CONFORMANCE && 1 == 1
+        args.push("--validate-conformance")
       end
       provision_vm(master.vm, args)
     end

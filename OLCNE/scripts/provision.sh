@@ -80,7 +80,7 @@ msg() {
 parse_args() {
   OLCNE_DEV= OLCNE_VERSION= K8S_VERSION= MASTER= MASTERS= WORKER= WORKERS=
   OPERATOR= MULTI_MASTER= REGISTRY_K8S= REGISTRY_OLCNE= VERBOSE= EXTRA_REPO=
-  NGINX_IMAGE= IP_ADDR=
+  NGINX_IMAGE= IP_ADDR= VALIDATE_CONFORMANCE=
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -180,6 +180,10 @@ parse_args() {
         VERBOSE=1
         shift
         ;;
+      "--validate-conformance")
+        VALIDATE_CONFORMANCE=1
+        shift
+        ;;
       *)
         echo "Invalid parameter: $1" >&2
         exit 1
@@ -189,7 +193,7 @@ parse_args() {
 
   readonly OLCNE_DEV OLCNE_VERSION K8S_VERSION MASTER MASTERS WORKER WORKERS
   readonly OPERATOR MULTI_MASTER REGISTRY_K8S REGISTRY_OLCNE VERBOSE EXTRA_REPO
-  readonly NGINX_IMAGE IP_ADDR
+  readonly NGINX_IMAGE IP_ADDR VALIDATE_CONFORMANCE
 }
 
 #######################################
@@ -593,6 +597,29 @@ ready() {
 }
 
 #######################################
+# Validate Kubernetes module conformance to specification
+# Globals:
+#   MASTERS
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
+begin_validate_conformance() {
+  local node=$(echo ${MASTERS} | sed -e 's/.* //')
+  local SONOBUOY_VERSION="0.16.4"
+  local SONOBUOY_FILENAME="sonobuoy_${SONOBUOY_VERSION}_linux_amd64.tar.gz"
+
+  msg "Beginning Kubernetes conformance test."
+  echo_do ssh vagrant@${node} "\"\
+      curl -LO https://github.com/vmware-tanzu/sonobuoy/releases/download/v${SONOBUOY_VERSION}/${SONOBUOY_FILENAME}; \
+      tar zxf ${SONOBUOY_FILENAME}; \
+      ./sonobuoy run --mode=certified-conformance;\
+      \""
+  msg "Kubernetes conformance test in progress, this may take up to 60 minutes."
+}
+
+#######################################
 # Main
 #######################################
 main () {
@@ -610,6 +637,9 @@ main () {
     deploy_kubernetes
     fixups
     ready
+    if [[ -n "${VALIDATE_CONFORMANCE}" ]]; then
+      begin_validate_conformance
+    fi
   fi
 }
 
